@@ -117,6 +117,8 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 
 ```text
 .
+├─ docs
+│  └─ adr                    # 아키텍처 결정 기록(ADR)과 Notion 원본 마이그레이션 문서
 ├─ centerton_rag
 │  ├─ main.py                  # FastAPI 엔트리포인트 / 답변 API
 │  ├─ config.py                # 환경변수 기반 설정, 검색 티어 허용목록
@@ -155,6 +157,12 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 ├─ pyproject.toml
 └─ Dockerfile
 ```
+
+---
+
+## 📚 의사결정 기록
+
+RAG 도입, 안전 룰 우선 구조, 데이터셋 분리, pgvector 전환, Spring/FastAPI 경계, triage 제거 같은 설계 결정은 [docs/adr](docs/adr/README.md)에 정리되어 있습니다.
 
 ---
 

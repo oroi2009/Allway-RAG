@@ -33,8 +33,8 @@ verification/*.json
 # 2. source_medical_qa_rag 는 "가장 가능성 높은 진단은?" 형태의 전문의 QA 다.
 #    이 제품은 진단을 확정하지 않으며, 이 데이터가 환자 답변 색인에 섞이면
 #    그 경계가 무너진다. 저장소에 두지 않는 것이 그 실수를 막는 가장 단순한 방법이다.
-# 3. 런타임 코드가 읽지 않고 배포 DB 에도 적재되어 있지 않다. 기본 색인 90건은
-#    rag/mvp_care_knowledge.jsonl 17 + derived/official 15 + derived/trusted 58 로
+# 3. 런타임 코드가 읽지 않고 배포 DB 에도 적재되어 있지 않다. 기본 색인 104건은
+#    rag/mvp_care_knowledge.jsonl 15 + derived/official 15 + derived/trusted 74 로
 #    전부 저장소에 남아 있어 색인 재현에 필요한 것은 갖춰져 있다.
 #
 # 로컬 파일은 그대로 두므로 보조 색인 실험은 계속 가능하다.

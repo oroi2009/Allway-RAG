@@ -23,7 +23,7 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 
 ### 2. 🔎 검증된 근거 검색
 - KURE-v1 한국어 임베딩 + pgvector 코사인 유사도
-- 큐레이션 17건 + 국내 공식 15건 + 식약처/FDA/AAD/ASPS 58건 = 기본 색인 90건
+- 큐레이션 15건 + 국내 공식 15건 + 식약처/FDA/AAD/ASPS 74건 = 기본 색인 104건
 - `retrieval_use` 허용목록으로 확장 참고 자료와 평가 홀드아웃의 유입 차단
 - `RAG_MIN_SIMILARITY` 미달 문서는 가중치를 낮추지 않고 근거에서 제거
 
@@ -46,6 +46,17 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 ### 6. 🔁 Java 매처 계약 동기화
 - Spring 1차 hard-stop 과 FastAPI 2차 검사가 같은 룰북·같은 매칭 규칙을 사용
 - 회귀 66건을 Python·Java 양쪽에서 채점해 두 구현이 갈라지면 빌드가 깨지도록 고정
+
+---
+
+## 🧩 기술 구조도
+
+![Allway 기술 구조도](docs/images/technical-architecture.png)
+
+- Spring Boot 백엔드는 인증·이미지 저장·대화 이력·앱 응답을 담당합니다.
+- FastAPI 서버는 응급 판정, 임베딩 검색, 근거 기반 생성을 담당합니다.
+- 두 서버는 같은 도커 네트워크(`centerton-net`)에 붙고, RAG 서버는 외부에 노출하지 않습니다.
+- 응급 룰은 두 서버가 같은 룰북 파일을 읽고, 같은 매칭 규칙을 구현합니다.
 
 ---
 
@@ -84,7 +95,7 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 
 ---
 
-## 🏗️ 아키텍처 개요
+## 🔁 처리 흐름
 
 ```text
 📱 Mobile App
@@ -100,16 +111,11 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
     ├─▶ 🚨 2차 응급 룰 검사 ── 매칭 ──▶ 고정 안내 (임베딩·검색·생성 금지)
     │                            불일치
     ├─▶ 🧠 KURE-v1 질문 임베딩
-    ├─▶ 🗄️ pgvector 기본 색인 90건 검색
+    ├─▶ 🗄️ pgvector 기본 색인 104건 검색
     │      └─ 유사도 미달 또는 0건 ──▶ 근거 부족 안내 (OpenAI 호출 금지)
     ├─▶ ✍️ OpenAI 근거 기반 답변 생성
     └─▶ 💬 상담 CTA 도출 (근거 메타데이터 기반)
 ```
-
-- 백엔드는 인증·이미지 저장·대화 이력·앱 응답을 담당합니다.
-- FastAPI 서버는 응급 판정, 임베딩 검색, 근거 기반 생성을 담당합니다.
-- 두 서버는 같은 도커 네트워크(`centerton-net`)에 붙고, RAG 서버는 외부에 노출하지 않습니다.
-- 응급 룰은 두 서버가 같은 룰북 파일을 읽고, 같은 매칭 규칙을 구현합니다.
 
 ---
 
@@ -118,7 +124,8 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 ```text
 .
 ├─ docs
-│  └─ adr                    # 아키텍처 결정 기록(ADR)과 Notion 원본 마이그레이션 문서
+│  ├─ adr                    # 아키텍처 결정 기록(ADR)과 Notion 원본 마이그레이션 문서
+│  └─ images                 # README 기술 구조도 이미지
 ├─ centerton_rag
 │  ├─ main.py                  # FastAPI 엔트리포인트 / 답변 API
 │  ├─ config.py                # 환경변수 기반 설정, 검색 티어 허용목록
@@ -132,10 +139,10 @@ Spring Boot 백엔드가 인증과 대화 저장을 담당하고, 이 FastAPI �
 │  │  ├─ emergency_rules.json  # 9개 위험 카테고리 hard-stop 룰셋
 │  │  └─ triage_policy.json    # 라우팅 정책 문서
 │  ├─ rag
-│  │  └─ mvp_care_knowledge.jsonl        # 큐레이션 사후관리 17건
+│  │  └─ mvp_care_knowledge.jsonl        # 큐레이션 사후관리 15건
 │  ├─ derived
 │  │  ├─ official_rag_candidate_chunks.jsonl   # 국내 공식 근거 15건
-│  │  ├─ trusted_rag_candidate_chunks.jsonl    # 식약처/FDA/AAD/ASPS 58건
+│  │  ├─ trusted_rag_candidate_chunks.jsonl    # 식약처/FDA/AAD/ASPS 74건
 │  │  └─ retriever_index_manifest.json         # 색인 계층과 건수 선언
 │  ├─ test_cases
 │  │  ├─ emergency_rule_regression.json  # 응급 룰 회귀 66건
@@ -176,55 +183,6 @@ RAG 도입, 안전 룰 우선 구조, 데이터셋 분리, pgvector 전환, Spri
 > 이 서버는 자체 인증이 없습니다. 도커 네트워크 내부에서 Spring 만 호출하도록 하고,
 > 호스트 포트로 공개하지 않습니다.
 
-### `POST /v1/aftercare/answer`
-
-Request:
-
-```json
-{
-  "question": "코 수술 2주차인데 코끝이 약간 휜 것 같아요. 재수술해야 하나요?",
-  "analysisImageUrl": "data:image/jpeg;base64,...",
-  "previousMessages": [
-    { "role": "USER", "content": "코 수술 받았어요" },
-    { "role": "ASSISTANT", "content": "어떤 증상이 있으신가요?" }
-  ]
-}
-```
-
-`analysisImageUrl` 과 `previousMessages` 는 생략할 수 있습니다.
-
-Response:
-
-```json
-{
-  "answer": "1) 현재 상태와 경과 요약 ...",
-  "route": "rag_answer",
-  "riskLevel": "watch",
-  "indexVersion": "2026-08-15-expanded-corpus",
-  "emergencyRuleVersion": "2026-08-15-mvp-rules-v3.1",
-  "emergencyRuleIds": [],
-  "blockedByEmergencyRule": false,
-  "allowRagAnswer": true,
-  "consultationCta": "video_consult",
-  "recommendedAction": "정확한 상태 확인을 위해 화상 상담 예약을 권장드립니다.",
-  "systemActions": [],
-  "confidence": 0.6781,
-  "sourceRefs": ["curated_mvp_rulebook"],
-  "ragDocuments": [
-    {
-      "docId": "GUIDE-RHINO-D8-D21-SWELLING",
-      "title": "코성형 D+8-D+21 부기와 모양 변화",
-      "source": "curated_mvp_rulebook",
-      "datasetType": "post_care_guide",
-      "retrievalUse": "curated",
-      "riskLevel": "watch",
-      "similarity": 0.6781,
-      "contentPreview": "코성형 후 2-3주에는 부기가 남아 ..."
-    }
-  ]
-}
-```
-
 ### `route` 값
 
 | route | 의미 | LLM 호출 | 근거 문서 |
@@ -244,7 +202,7 @@ Response:
 | `DATABASE_URL` | pgvector 가 설치된 PostgreSQL 주소 (`jdbc:` 접두사 허용) | — |
 | `DATABASE_USERNAME` | DB 사용자 | — |
 | `DATABASE_PASSWORD` | DB 비밀번호 | — |
-| `RAG_INDEX_VERSION` | 검색 대상 색인 버전 | `2026-08-15-expanded-corpus` |
+| `RAG_INDEX_VERSION` | 검색 대상 색인 버전 | `2026-08-20-translated-corpus` |
 | `RAG_TOP_K` | 근거로 사용할 문서 수 | `5` |
 | `RAG_MIN_SIMILARITY` | 이 값 미달 문서는 근거에서 제거 | `0.50` |
 | `RAG_ALLOWED_RETRIEVAL_USE` | 검색 허용 티어 (쉼표 구분) | `curated,official_rag_candidate,trusted_rag_candidate` |
@@ -256,7 +214,7 @@ Response:
 | `OPENAI_MAX_OUTPUT_TOKENS` | 생성 최대 토큰 | `900` |
 | `RAG_RULEBOOK_ROOT` | 룰북 경로. 이미지에 구워져 있어 기본값 유지 권장 | `/app/rag_rulebook` |
 
-`RAG_ALLOWED_RETRIEVAL_USE` 에서 `curated` 를 빼면 검토된 큐레이션 문서 17건이 검색에서
+`RAG_ALLOWED_RETRIEVAL_USE` 에서 `curated` 를 빼면 검토된 큐레이션 문서 15건이 검색에서
 사라집니다. 임계값이나 임베딩 모델을 바꾸면 저장된 벡터 기준이 무효가 되므로 재적재와 재측정이
 필요합니다.
 
@@ -329,7 +287,7 @@ HuggingFace 캐시 볼륨이 없으면 컨테이너를 새로 만들 때마다 K
 
 ## 🗄️ 색인 적재
 
-배포된 색인 90건을 만드는 스크립트입니다. `doc_id` 기준 upsert 라 여러 번 실행해도 안전합니다.
+배포된 색인 104건을 만드는 스크립트입니다. `doc_id` 기준 upsert 라 여러 번 실행해도 안전합니다.
 
 ```bash
 python scripts/ingest_rag_documents.py            # dry-run, DB 미기록
@@ -381,24 +339,3 @@ Spring 쪽 Java 매처는 같은 회귀 스위트로 채점합니다.
   진단 확정형 전문 QA 가 환자 답변 근거로 섞이는 것을 막기 위해서입니다.
 - 원본 HTML/PDF 스냅샷도 저장소에 담지 않습니다. 각 청크의 `metadata.url` 과 `source_refs` 에
   출처가 보존되어 있습니다.
-
----
-
-## 👥 팀 구성 (AI / FastAPI)
-
-<table>
-  <tr>
-    <td align="center" width="180">
-      <a href="https://github.com/oroi2009">
-        <img src="https://github.com/oroi2009.png" width="120" height="120" style="border-radius:50%" /><br/>
-        <b>천성진</b>
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">AI / FastAPI</td>
-  </tr>
-  <tr>
-    <td align="center"><a href="https://github.com/oroi2009">@oroi2009</a></td>
-  </tr>
-</table>
